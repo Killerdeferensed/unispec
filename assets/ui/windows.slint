@@ -1,0 +1,13 @@
+import { Explorer } from "explorer_window.slint";
+import { SpecWindowMain } from "spec_main_window.slint";
+import { SubMainWindow } from "spec_sub_main_window.slint";
+import { Inspector } from "inspector.slint";
+
+export { Explorer, Inspector }
+
+export component SpecMain {
+    VerticalLayout {
+        SpecWindowMain {}
+        SubMainWindow {}
+    }
+}
