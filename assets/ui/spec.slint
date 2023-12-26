@@ -1,10 +1,14 @@
 import { Explorer, SpecMain, Inspector } from "windows.slint";
-component MainWindow inherits Window {
+export component MainWindow inherits Window {
     title: "Sectr";
+    preferred-height: 720px;
+    preferred-width: 1280px;
     padding: 0;
     HorizontalLayout {
         Explorer {}
-        SpecMain {}
+        SpecMain {
+            width: 64%;
+        }
         Inspector {}
     }
 }

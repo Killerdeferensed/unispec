@@ -1,0 +1,47 @@
+component ExplorerControlsItem inherits Rectangle {
+    in property <string> title;
+    in property <image> ico;
+    width: self.height;
+    Image {
+        width: 100%;
+        height: 100%;
+        source <=> ico;
+    }
+    Text {
+        font-family: "Arial";
+        font-size: 10px;
+        text <=> title;
+    }
+    callback clicked <=> touch.clicked;
+    states [
+        pressed when touch.pressed:{
+            state.opacity: 0.9;
+        }
+        hover when touch.has-hover:{
+            state.opacity: 0.5;
+        }
+    ]
+    touch := TouchArea{
+        width: 100%;
+        height: 100%;
+    }
+    state := Rectangle{
+        opacity: 0;
+        background: white;
+         
+        animate opacity {
+            duration: 50ms;
+        }
+    }
+}
+
+export component AddSpec inherits ExplorerControlsItem {
+    title: @tr("+");
+}
+
+export component SaveSpec inherits ExplorerControlsItem {
+    ico: @image-url("../image/2853302-200.png");
+}
+export component LoadSpec inherits ExplorerControlsItem {
+    ico: @image-url("../image/724933.png");
+}
