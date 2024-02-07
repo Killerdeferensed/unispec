@@ -1,6 +1,13 @@
-use::slint;
+use slint::{ComponentHandle, Model};
+pub mod file_loader;
+mod peak;
+mod roi;
+mod spec;
+mod tests;
+mod data_processing;
 
-slint::slint!{ import { MainWindow } from "assets/ui/spec.slint";}
+slint::include_modules!();
+
 fn main() {
     let main_window = MainWindow::new().unwrap();
     main_window.run().unwrap();

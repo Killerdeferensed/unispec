@@ -37,6 +37,7 @@ component ExplorerControlsItem inherits Rectangle {
 
 export component AddSpec inherits ExplorerControlsItem {
     title: @tr("+");
+    callback add_spectrum <=> self.clicked;
 }
 
 export component SaveSpec inherits ExplorerControlsItem {
