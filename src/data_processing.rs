@@ -1,9 +1,17 @@
-use std::{iter, vec};
+use std::{cmp, f64::consts::PI, iter, vec};
 
 use ark_bls12_381::Fq as F;
 use ark_ff::{Field, Fp, FpConfig, PrimeField};
 use ark_poly::{univariate::SparsePolynomial, Polynomial};
 use nalgebra::{zero, DMatrix, DVector};
+use varpro::model;
+
+use crate::peak::Peak;
+
+#[derive(Debug)]
+pub enum DataError {
+    FittingSizeError,
+}
 
 pub fn get_background(data: &[u32]) -> Vec<f64> {
     let mut n: usize = 1;
@@ -100,7 +108,7 @@ pub fn get_background(data: &[u32]) -> Vec<f64> {
         );
         f = l - n - m;
         if e[mu] < (f + m as usize) as f64 + { (2 * f) as f64 }.powi(1 / 2) {
-            // println!("n = {}", n);
+            println!("Finished with by hi_square, n = {}", n);
             return z[mu].clone();
         };
         sigma.push(Vec::from_iter(
@@ -117,13 +125,15 @@ pub fn get_background(data: &[u32]) -> Vec<f64> {
             1.0 / z[mu][i]
         })));
         if mu > 0 {
-            let all_eq = (0..c[mu - 1].len()).all(|j| {
+            let size = cmp::min(c[mu].len(), c[mu - 1].len());
+            let all_eq = (0..size).all(|j| {
+                println!("{j}");
                 c[mu][j] - sigma[mu][j] < c[mu - 1][j] && c[mu - 1][j] < c[mu][j] + sigma[mu][j]
             });
             if all_eq {
-                if sigma[mu][n] / c[mu][n] < 1.0 {
+                if sigma[mu][n] / c[mu][n] < 10.0 {
                     if ud {
-                        // println!("n = {}",n);
+                        println!("Finished with ud = true, n = {}", n);
                         return z[mu].clone();
                     }
                     n = n + 1;
@@ -140,7 +150,138 @@ pub fn get_background(data: &[u32]) -> Vec<f64> {
         b.push(vec![]);
         c.push(vec![]);
     }
-    // println!("FINISHED WITH MU OVERLOAD! N = {}", n);
+    println!("FINISHED WITH MU OVERLOAD! N = {}", n);
 
     z[mu].clone()
+}
+
+pub fn get_background_step_function(data: &[u32]) -> Vec<f64> {
+    if data.len() < 10 {
+        return Vec::from_iter(iter::repeat(data[0].try_into().unwrap()).take(data.len()));
+    }
+    let l = data.len();
+    let y = Vec::from_iter(data.into_iter().map(|x| f64::from(*x)));
+
+    let b_m: f64 = (0..5).into_iter().map(|j| y[j]).sum::<f64>() / 5.0;
+    let b_n: f64 = (l - 5..l).into_iter().map(|j| y[j]).sum::<f64>() / 5.0;
+
+    fn p_j(j: usize, b_m: f64, b_n: f64, l: usize, y: Vec<f64>) -> f64 {
+        y[j] - ((b_n - b_m) / l as f64 * j as f64 + b_m)
+    }
+
+    let div: f64 = (0..l)
+        .into_iter()
+        .map(|j| p_j(j, b_m, b_n, l, y.clone()))
+        .sum();
+
+    let mut result: Vec<f64> = vec![];
+
+    for i in 0..l {
+        let add: f64 = (0..i)
+            .into_iter()
+            .map(|j| p_j(j, b_m, b_n, l, y.clone()))
+            .sum();
+        let sub: f64 = (i..l)
+            .into_iter()
+            .map(|j| p_j(j, b_m, b_n, l, y.clone()))
+            .sum();
+        let f_i = 0.5 * ((b_m + b_n) + (b_n - b_m) * (add - sub) / div);
+        result.push(f_i);
+    }
+    result
+}
+
+pub fn gauss(x: &DVector<f64>, mu: f64, sigma: f64) -> DVector<f64> {
+    x.map(|x| (-0.5 * ((x - mu) / sigma).powi(2)).exp() / (sigma * (2.0 * PI).sqrt()))
+}
+
+pub fn gauss_dmu(x: &DVector<f64>, mu: f64, sigma: f64) -> DVector<f64> {
+    x.map(|x| {
+        ((x - mu) / (sigma.powi(3) * (2.0 * PI).sqrt())) * (-0.5 * ((x - mu) / sigma).powi(2)).exp()
+    })
+}
+
+pub fn gauss_dsigma(x: &DVector<f64>, mu: f64, sigma: f64) -> DVector<f64> {
+    x.map(|x| {
+        (1.0 / (sigma.powi(2) * (2.0 * PI).sqrt()))
+            * (((x - mu) / sigma).powi(2) - 1.0)
+            * (-0.5 * ((x - mu) / sigma).powi(2)).exp()
+    })
+}
+
+pub fn fit_peaks(
+    n: usize,
+    initial_mu: impl Iterator<Item = f64> + ExactSizeIterator,
+    peak_data: Vec<f64>,
+) -> Result<Vec<Peak>, DataError> {
+    use varpro::prelude::*;
+    use varpro::solvers::levmar::{LevMarProblemBuilder, LevMarSolver};
+
+    if n != initial_mu.len() {
+        return Err(DataError::FittingSizeError);
+    }
+    let x = DVector::from_vec(Vec::from_iter(
+        (0..i32::try_from(peak_data.len()).unwrap())
+            .into_iter()
+            .map(|i| f64::try_from(i).unwrap()),
+    ));
+    let mut model_params: Vec<String> = vec![];
+    for i in (0..n) {
+        model_params.push(format!("mu{}", i + 1));
+        model_params.push(format!("sigma{}", i + 1));
+    }
+    println!("{:?}", &model_params[..]);
+    let mut model = SeparableModelBuilder::<f64>::new(&model_params)
+        .function([&model_params[0], &model_params[1]], gauss)
+        .partial_deriv(&model_params[0], gauss_dmu)
+        .partial_deriv(&model_params[1], gauss_dsigma);
+    if n > 1 {
+        for i in 1..n.try_into().unwrap() {
+            model = model
+                .function([&model_params[2 * i], &model_params[2 * i + 1]], gauss)
+                .partial_deriv(&model_params[2 * i], gauss_dmu)
+                .partial_deriv(&model_params[2 * i + 1], gauss_dsigma);
+        }
+    }
+    let mut param: Vec<f64> = vec![];
+    for p in initial_mu {
+        param.push(p);
+        param.push(5.0);
+    }
+    let model = model
+        .initial_parameters(param)
+        .independent_variable(x)
+        .build()
+        .unwrap();
+    let problem = LevMarProblemBuilder::new(model)
+        .observations(DVector::from_vec(peak_data))
+        .build()
+        .unwrap();
+    let fit_result = LevMarSolver::default().fit(problem);
+    let mut res: Vec<Peak> = vec![];
+    match fit_result {
+        Ok(data) => {
+            let magnitudes = data.linear_coefficients().unwrap();
+            let peak_params = data.nonlinear_parameters();
+            let peak_params = Vec::from_iter(peak_params.into_iter());
+            let magnitudes = Vec::from_iter(magnitudes.into_iter());
+            println!(
+                "L_params {}; L_magns {}",
+                peak_params.len(),
+                magnitudes.len()
+            );
+
+            for i in 0..n.try_into().unwrap() {
+                res.push(Peak::new(
+                    *magnitudes[i],
+                    *peak_params[2 * i],
+                    *peak_params[2 * i + 1],
+                ));
+            }
+        }
+        Err(e) => {
+            println!("Should be able to fit!\n Error: {:?}", e);
+        }
+    }
+    Ok(res)
 }

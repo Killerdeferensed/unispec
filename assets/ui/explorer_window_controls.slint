@@ -1,3 +1,4 @@
+import { CallbackHandler } from "callback_handler.slint";
 component ExplorerControlsItem inherits Rectangle {
     in property <string> title;
     in property <image> ico;
@@ -37,7 +38,7 @@ component ExplorerControlsItem inherits Rectangle {
 
 export component AddSpec inherits ExplorerControlsItem {
     title: @tr("+");
-    callback add_spectrum <=> self.clicked;
+    clicked => { CallbackHandler.add-spec()}
 }
 
 export component SaveSpec inherits ExplorerControlsItem {

@@ -1,14 +1,17 @@
 import { Explorer, SpecMain, Inspector } from "windows.slint";
+import { CallbackHandler } from "callback_handler.slint";
 export component MainWindow inherits Window {
     title: "Sectr";
     preferred-height: 720px;
     preferred-width: 1280px;
     padding: 0;
     HorizontalLayout {
-        Explorer {}
+        Explorer {
+        }
         SpecMain {
             width: 64%;
         }
         Inspector {}
     }
 }
+export { CallbackHandler }

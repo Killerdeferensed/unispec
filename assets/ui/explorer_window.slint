@@ -1,19 +1,54 @@
 import { AddSpec, SaveSpec , LoadSpec} from "explorer_window_controls.slint";
-import { HorizontalBox } from "std-widgets.slint";
+import { HorizontalBox, VerticalBox } from "std-widgets.slint";
 component ExplorerItem inherits Rectangle {
-    
+    in property <string> title;
+    in property <[string]> ranges: ["MEE","AAAAAAA","SDSDSDDS","Wrryyyy","YUPPIE"];
+    height: 10%;
+    VerticalLayout {
+        HorizontalLayout {
+            width: 100%;
+            alignment: end;
+            Rectangle {
+                height: 15%;
+                width: 100%;
+                background: gray;
+                Text {
+                    x: (parent.width - self.width)*0.93;
+                    color: white;
+                    horizontal-alignment: left;
+                    text <=> title;
+                }
+            }
+        }
+        for item in ranges: Rectangle{
+            // root.height: 500px;
+            height: 20%;
+            border-color: black;
+            border-width: 1px;
+            width: 10%;
+            background: pink;
+            Text {
+                x: (parent.width - self.width) * 0.93;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+                text: item;
+            }
+        }
+    }
 }
 
 component ExplorerItemROI inherits Rectangle {
-    
-}
+
+ }
 
 component ExplorerControls inherits Rectangle {
     y: 0;
     height: 5%;
     padding-top: 0px;
 }
+
 export component Explorer inherits Rectangle {
+    in-out property <[string]> model: ["LALA","weee","DEEZNUTS"];
     property <color> bg: #d4cece;
     width: 17%;
     background: bg;
@@ -23,7 +58,7 @@ export component Explorer inherits Rectangle {
             height: 70%;
             padding-top: 0;
             //padding-bottom: (parent.height - self.height)/2;
-            padding-right: parent.width*0.01;
+            padding-right: parent.width * 0.01;
             alignment: end;
             vertical-stretch: 1;
             SaveSpec {
@@ -31,17 +66,36 @@ export component Explorer inherits Rectangle {
                 padding: 0px;
                 background: bg.darker(0.1);
             }
+
             LoadSpec {
                 height: parent.height;
                 padding: 0px;
                 background: bg.darker(0.1);
             }
-            AddSpec {
+
+            add_button := AddSpec {
                 height: parent.height;
                 padding: 0px;
                 background: bg.darker(0.1);
             }
         }
     }
-
+    VerticalBox {
+        padding-left: 0;
+        padding-right: 0;
+        // horizontal-stretch: 0;
+        padding-top: parent.height*0.05;
+        Rectangle {
+            padding-bottom: 0;
+            height: 3%;
+            background: white;
+            Text {
+                text: "Spectrums";
+            }
+        }
+        for item in model : ExplorerItem{
+            padding-top: 0;
+            title: item;            
+        }
+    }
 }
